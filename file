@@ -1,0 +1,87 @@
+Step 1: Build Your Python Package
+In your project directory, run the following commands:
+
+bash
+Copy
+Edit
+pip install --upgrade build
+python -m build
+If your project includes a setup.py file, you can alternatively run:
+
+bash
+Copy
+Edit
+python setup.py sdist bdist_wheel
+🚀 Step 2: Create a Feed in Azure DevOps
+Sign in to your Azure DevOps organization and navigate to your project.
+
+Go to Artifacts and click Create Feed.
+
+Configure the following settings:
+
+Name: Provide a name for your feed.
+
+Visibility: Choose who can view your packages (e.g., organization or project level).
+
+Include packages from public sources: Check this if you want to include packages from sources like NuGet or npm.
+
+Scope: Decide whether the feed should be scoped to the project or the entire organization.
+
+Click Create to finish setting up the feed.
+
+🔗 Step 3: Connect to the Feed
+In Azure DevOps, go to Artifacts, select your feed, then click Connect to Feed.
+
+Under the Python section, select pip.
+
+If you're using Azure Artifacts with pip for the first time:
+
+Click Get the tools and follow the instructions to install the required tools and dependencies.
+
+🛠️ Step 4: Configure pip for Azure Artifacts
+Create and activate a virtual environment:
+
+bash
+Copy
+Edit
+python -m venv env
+source env/bin/activate  # On Windows: env\Scripts\activate
+Add a pip.conf (Linux/Mac) or pip.ini (Windows) file inside the virtual environment directory, and paste the provided snippet from Azure DevOps. Your configuration file should resemble:
+
+Linux/macOS (env/pip.conf):
+
+ini
+Copy
+Edit
+[global]
+index-url=https://pkgs.dev.azure.com/<ORG_NAME>/<PROJECT_NAME>/_packaging/<FEED_NAME>/pypi/simple/
+Windows (env/pip.ini):
+
+ini
+Copy
+Edit
+[global]
+index-url=https://pkgs.dev.azure.com/<ORG_NAME>/<PROJECT_NAME>/_packaging/<FEED_NAME>/pypi/simple/
+📤 Step 5: Publish Your Package
+Run the following to create distribution files:
+
+bash
+Copy
+Edit
+python setup.py sdist bdist_wheel
+Then publish your package using twine:
+
+bash
+Copy
+Edit
+twine upload -r <FEED_NAME> dist/*
+⚠️ Replace <FEED_NAME> with the name of your Azure Artifacts feed. This prevents uploading to PyPI by mistake.
+
+📥 Step 6: Install Your Package
+To install your package from your feed, run:
+
+bash
+Copy
+Edit
+pip install <PACKAGE_NAME>
+Replace <PACKAGE_NAME> with the actual name of the package in your feed.
