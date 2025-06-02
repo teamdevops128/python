@@ -1,37 +1,34 @@
 #!/bin/bash
 
-# === CONFIGURATION ===
-GITHUB_TOKEN="ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Your GitHub PAT
-ORG_NAME="xx"                                   # Your GitHub org name
-RULESET_ID="12345678"                           # ID of the ruleset you want to apply
-CSV_FILE="repos.csv"                            # Path to your CSV
+ORG_NAME="xx"                                  
+RULESET_ID="12345678"                           
+CSV_FILE="repos.csv"                            
 
-# === FUNCTION TO APPLY RULESET ===
+
 apply_ruleset() {
     local repo_name="$1"
     echo "Applying ruleset to $repo_name..."
 
-    # Endpoint to associate a ruleset with a repository
     curl -s -X POST "https://api.github.com/orgs/$ORG_NAME/rulesets/$RULESET_ID/repositories" \
         -H "Authorization: Bearer $GITHUB_TOKEN" \
         -H "Accept: application/vnd.github+json" \
         -d "{\"repository_ids\": [\"$(get_repo_id $repo_name)\"]}"
 }
 
-# === FUNCTION TO GET REPO ID ===
+
 get_repo_id() {
     local repo_name="$1"
     curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
         "https://api.github.com/repos/$ORG_NAME/$repo_name" | jq '.id'
 }
 
-# === MAIN EXECUTION ===
+
 if ! command -v jq &> /dev/null; then
     echo "This script requires 'jq' (a JSON processor). Please install it first."
     exit 1
 fi
 
-# Skip header and loop through each repo
+
 tail -n +2 "$CSV_FILE" | while IFS=, read -r repo_name; do
     apply_ruleset "$repo_name"
 done
