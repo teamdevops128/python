@@ -1,0 +1,76 @@
+trigger:
+- main
+
+pool:
+  name: aks-agent-pool
+  demands: Agent.OS -equals Linux
+
+variables:
+  ORG_NAME: ""
+  RULESET_ID: "5818224"
+
+steps:
+
+- script: |
+    #!/bin/bash
+    set -e
+
+    CSV_FILE="repos.csv"
+
+    echo "🔍 Verifying CSV file reading..."
+    if [[ ! -f "$CSV_FILE" ]]; then
+        echo " File '$CSV_FILE' not found."
+        exit 1
+    fi
+
+    echo "Found CSV file. Contents:"
+    tail -n +2 "$CSV_FILE" | while IFS=, read -r repo_name; do
+        echo "Repo: $repo_name"
+    done
+  displayName: 'Step 1 - Verify CSV Reading'
+
+
+- script: |
+    #!/bin/bash
+    set -e
+
+    ORG_NAME="${ORG_NAME}"
+    RULESET_ID="${RULESET_ID}"
+    CSV_FILE="repos.csv"
+
+    if ! command -v jq &> /dev/null; then
+        echo "Installing jq..."
+        sudo apt-get update && sudo apt-get install -y jq
+    fi
+
+    get_repo_id() {
+        local repo_name="$1"
+        curl -s -H "Authorization: Bearer $(TOKEN)" \
+             -H "Accept: application/vnd.github+json" \
+             "https://api.github.com/repos/$ORG_NAME/$repo_name" | jq '.id'
+    }
+
+    apply_ruleset() {
+        local repo_name="$1"
+        local repo_id
+        repo_id=$(get_repo_id "$repo_name")
+        echo "Applying ruleset to $repo_name (ID: $repo_id)..."
+
+        curl -s -X POST "https://api.github.com/orgs/$ORG_NAME/rulesets/$RULESET_ID/repositories" \
+            -H "Authorization: Bearer $(TOKEN)" \
+            -H "Accept: application/vnd.github+json" \
+            -d "{\"repository_ids\": [$repo_id]}"
+    }
+
+    echo " Applying ruleset to repositories from CSV..."
+    tail -n +2 "$CSV_FILE" | while IFS=, read -r repo_name; do
+        if [[ -n "$repo_name" ]]; then
+            echo "➡  Repo: $repo_name"
+            apply_ruleset "$repo_name"
+        fi
+    done
+
+    echo "Ruleset applied to all listed repositories."
+  displayName: 'Step 2 - Apply Ruleset'
+  env:
+    GITHUB_TOKEN: $(GITHUB_TOKEN)  # Define this as a pipeline secret variable
